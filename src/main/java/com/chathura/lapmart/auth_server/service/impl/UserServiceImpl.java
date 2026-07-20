@@ -5,6 +5,7 @@ import com.chathura.lapmart.auth_server.entity.Role;
 import com.chathura.lapmart.auth_server.entity.User;
 import com.chathura.lapmart.auth_server.enums.AppRole;
 import com.chathura.lapmart.auth_server.exception.DuplicateEntyException;
+import com.chathura.lapmart.auth_server.repo.RoleRepo;
 import com.chathura.lapmart.auth_server.repo.UserRepo;
 import com.chathura.lapmart.auth_server.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepo userRepo;
     private final PasswordEncoder passwordEncoder;
+    private final RoleRepo roleRepo;
 
     @Override
     public void create(RequestUserDto dto) {
@@ -31,9 +33,8 @@ public class UserServiceImpl implements UserService {
     }
 
     private User toEntityUser(RequestUserDto dto){
-        Role userRole = Role.builder()
-                .name(AppRole.ROLE_USER)
-                .build();
+        Role userRole = roleRepo.findByName(AppRole.ROLE_USER)
+                .orElseThrow(() -> new RuntimeException("Default Role not found!"));
 
         return   User.builder()
                 .username(dto.getUsername())
