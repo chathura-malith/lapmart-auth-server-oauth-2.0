@@ -20,6 +20,7 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
+import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
@@ -44,14 +45,17 @@ import java.util.UUID;
 public class SecurityConfig {
 
     @Bean
-    @Order(2)
+    @Order(1)
     public SecurityFilterChain authServerSecurityFilterChain(HttpSecurity http) throws Exception {
         OAuth2AuthorizationServerConfigurer authorizationServerConfigurer =
                 OAuth2AuthorizationServerConfigurer.authorizationServer();
 
         http
                 .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
-                .with(authorizationServerConfigurer, Customizer.withDefaults())
+                .with(authorizationServerConfigurer,(authenticationServer)->
+                    authenticationServer.oidc(Customizer.withDefaults())
+                )
+//                .with(authorizationServerConfigurer, Customizer.withDefaults())
                 .authorizeHttpRequests(authorize -> authorize
                         .anyRequest().authenticated()
                 )
@@ -62,16 +66,17 @@ public class SecurityConfig {
                         )
                 )
                 .oauth2ResourceServer(resourceServer ->
-                        resourceServer.jwt(Customizer.withDefaults()));
+                        resourceServer.jwt(Customizer.withDefaults()))
+                .formLogin(Customizer.withDefaults());
 
         return http.build();
     }
 
     @Bean
-    @Order(1)
+    @Order(2)
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/api/v1/**","/login")
+//                .securityMatcher("/api/v1/**","/login")
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/v1/auth/register").permitAll()
@@ -94,6 +99,8 @@ public class SecurityConfig {
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
                 .redirectUri("https://oidcdebugger.com/debug")
+                .scope(OidcScopes.OPENID)
+                .scope(OidcScopes.PROFILE)
                 .scope("read:products")
                 .scope("write:orders")
                 .clientSettings(ClientSettings.builder().requireAuthorizationConsent(true).build())
